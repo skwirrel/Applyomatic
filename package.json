@@ -1,0 +1,22 @@
+{
+  "name": "auto-apply-llm",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Automate job application drafting (CV + covering letter) using an LLM.",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "once": "node src/main.js --once",
+    "daemon": "node src/main.js --daemon"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "marked": "^15",
+    "marked-terminal": "^7.3.0",
+    "openai": "^4.57.0",
+    "yargs": "^17.7.2"
+  }
+}

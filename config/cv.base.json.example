@@ -1,0 +1,36 @@
+{
+  "personalDetails": {
+    "name": "YOUR NAME",
+    "phone": "+44XXXXXXXXXX",
+    "email": "you@example.com"
+  },
+  "skills": [
+    "Product strategy and roadmap ownership",
+    "User-centred service design in government settings",
+    "LLM application architecture and prompt engineering",
+    "Data visualisation with Observable/Plot and D3",
+    "Python for analysis and ETL",
+    "Node.js back-end services",
+    "Agile delivery leadership",
+    "Security and privacy by design",
+    "Stakeholder engagement across policy and delivery"
+  ],
+  "pastJobRoles": [
+    {
+      "from": "2021-06",
+      "to": "2025-07",
+      "jobTitle": "Principal Product Manager, Public Sector",
+      "description": "Led multidisciplinary teams delivering high-impact digital services; introduced AI-assisted triage and document synthesis; worked with ministers' private offices on delivery priorities."
+    },
+    {
+      "from": "2018-01",
+      "to": "2021-05",
+      "jobTitle": "Head of Data Products",
+      "description": "Built data platforms and analytics capabilities; established governance and security baselines; managed vendor relationships."
+    }
+  ],
+  "qualifications": [
+    { "title": "MSc, Computer Science", "year": 2014, "grade": "Distinction" },
+    { "title": "BSc, Economics", "year": 2010, "grade": "First" }
+  ]
+}

@@ -1,0 +1,6 @@
+.env
+config/covering-letter-notes.md
+config/cv.base.json
+config/job.config.json
+node_modules/
+package-lock.json

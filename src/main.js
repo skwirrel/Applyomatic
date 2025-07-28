@@ -453,27 +453,49 @@ async function draftCV(cvBaseData, jobDescription) {
     qualifications: cvBaseData.qualifications,
   };
 
-  // Skills with relevance
-  const skillsWithRelevance = [];
-  for (const skill of cvBaseData.skills || []) {
-    const { score, rationale } = await assessSkillRelevanceToNewJob(skill, jobDescription);
-    skillsWithRelevance.push({ skill, score, rationale });
-  }
-  skillsWithRelevance.sort(byScoreDesc);
-  cv.skills = skillsWithRelevance.slice(0, 10).map(s => s.skill);
+// Skills with relevance
+console.log(`[INFO] Assessing relevance of skills to the job description.`);
+const skillsWithRelevance = [];
+for (const skill of cvBaseData.skills || []) {
+   console.log(`[INFO] Assessing skill: "${skill}"`);
+   const { score, rationale } = await assessSkillRelevanceToNewJob(skill, jobDescription);
+   console.log(`[INFO] Skill "${skill}" scored ${score}/10. Rationale: ${rationale}`);
+   skillsWithRelevance.push({ skill, score, rationale });
+}
+skillsWithRelevance.sort(byScoreDesc);
+cv.skills = skillsWithRelevance.slice(0, 10).map(s => s.skill);
+console.log(`[INFO] Top 10 relevant skills selected.`);
 
-  // Roles with relevance
-  const rolesToInclude = [];
-  for (const role of cvBaseData.pastJobRoles || []) {
-    const { score } = await assessRoleRelevanceToNewJob(role, jobDescription);
-    const includeRole = { ...role };
-    if (score < 80) {
+// Achievements with relevance
+console.log(`[INFO] Assessing relevance of achievements to the job description.`);
+const achievementsWithRelevance = [];
+for (const achievement of cvBaseData.achievements || []) {
+   console.log(`[INFO] Assessing achievement: "${achievement}"`);
+   const { score, rationale } = await assessSkillRelevanceToNewJob(achievement, jobDescription);
+   console.log(`[INFO] Achievement "${achievement}" scored ${score}/10. Rationale: ${rationale}`);
+   achievementsWithRelevance.push({ achievement, score, rationale });
+}
+achievementsWithRelevance.sort(byScoreDesc);
+cv.achievements = achievementsWithRelevance.slice(0, 10).map(a => a.achievement);
+console.log(`[INFO] Top 10 relevant achievements selected.`);
+
+// Roles with relevance
+console.log(`[INFO] Assessing relevance of past job roles to the job description.`);
+const rolesToInclude = [];
+for (const role of cvBaseData.pastJobRoles || []) {
+   console.log(`[INFO] Assessing role: "${role.jobTitle}" (${role.from} - ${role.to || 'Present'})`);
+   const { score } = await assessRoleRelevanceToNewJob(role, jobDescription);
+   console.log(`[INFO] Role "${role.jobTitle}" scored ${score}/10.`);
+   const includeRole = { ...role };
+   if (score < 80) {
+      console.log(`[INFO] Role "${role.jobTitle}" is less relevant. Omitting description.`);
       delete includeRole.description;
-    }
-    rolesToInclude.push(includeRole);
-  }
-  rolesToInclude.sort(byStartDateDesc);
-  cv.pastJobRoles = rolesToInclude;
+   }
+   rolesToInclude.push(includeRole);
+}
+rolesToInclude.sort(byStartDateDesc);
+cv.pastJobRoles = rolesToInclude;
+console.log(`[INFO] Relevant past job roles selected and sorted by start date.`);
 
   const { cv_markdown } = await composeCVMarkdown(cv);
   const polished = await polishCV(cv_markdown);

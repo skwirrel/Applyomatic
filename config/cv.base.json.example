@@ -4,6 +4,17 @@
     "phone": "+44XXXXXXXXXX",
     "email": "you@example.com"
   },
+  "achievements": [
+    "Led a team of 6 engineers to deliver a complex data integration platform on time and under budget.",
+    "Introduced automated testing and CI/CD pipelines, reducing deployment errors by over 90%.",
+    "Presented research on digital inclusion at the National Digital Government Conference 2023.",
+    "Developed a lightweight encryption module now used in multiple internal tools across departments.",
+    "Managed a cloud migration project that reduced infrastructure costs by 30% annually.",
+    "Contributed to an open-source project adopted by over 200 organisations worldwide.",
+    "Received formal commendation from the Cabinet Office for work on accessible service design.",
+    "Mentored 3 junior developers, all of whom progressed to senior roles within 18 months.",
+    "Wrote internal guidance on responsible AI use, later adopted across 5 partner organisations."
+  ],
   "skills": [
     "Product strategy and roadmap ownership",
     "User-centred service design in government settings",

@@ -21,25 +21,49 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const TEMPERATURE = parseFloat(process.env.OPENAI_TEMPERATURE || '0.3');
 
+/**
+ * Validates that required environment variables are set.
+ * Throws an error if any required variable is missing.
+ */
 function assertEnv() {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY is not set. Create a .env file.');
   }
 }
 
+/**
+ * Reads a JSON file from the given path and parses it into an object.
+ * @param {string} p - Path to the JSON file.
+ * @returns {Promise<Object>} Parsed JSON object.
+ */
 async function readJSON(p) {
   const s = await fs.readFile(p, 'utf8');
   return JSON.parse(s);
 }
 
+/**
+ * Reads a text file from the given path and returns its content as a string.
+ * @param {string} p - Path to the text file.
+ * @returns {Promise<string>} File content as a string.
+ */
 async function readText(p) {
   return fs.readFile(p, 'utf8');
 }
 
+/**
+ * Generates a random integer between the specified minimum and maximum values (inclusive).
+ * @param {number} min - Minimum value.
+ * @param {number} max - Maximum value.
+ * @returns {number} Random integer.
+ */
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * Returns the current date and time in ISO 8601 format.
+ * @returns {string} Current date and time in ISO format.
+ */
 function isoNow() {
   return new Date().toISOString();
 }
@@ -48,58 +72,64 @@ function isoNow() {
 // LLM wrapper using Responses API with structured outputs
 // ————————————————————————————————————————————————
 /**
- * @param {Object} options
- * @param {Array} options.input - messages array
- * @param {Object} [options.schema] - JSON Schema for structured outputs
- * @param {string} [options.instructions]
- * @param {number} [options.temperature]
- * @returns {Promise<any>}
+ * Sends a request to the LLM (Language Model) with the specified parameters.
+ * Supports structured outputs using JSON Schema.
+ * @param {Object} params - Parameters for the LLM request.
+ * @param {string} params.instructions - Instructions for the LLM.
+ * @param {string} params.input - Input text for the LLM.
+ * @param {Object} [params.schema] - JSON Schema for structured output.
+ * @param {number} [params.temperature] - Temperature for the LLM (default is TEMPERATURE).
+ * @returns {Promise<any>} Response from the LLM.
  */
-// LLM wrapper using Responses API with Structured Outputs
-// NOTE: In the Responses API the schema lives under `text.format`.
 async function sendToLLM({ instructions, input, schema, temperature = TEMPERATURE }) {
-   const options = {
-      model: MODEL,
-      tools: [{
-         type: "web_search_preview",
-         search_context_size: "medium",
-         user_location: {
-            "type": "approximate",
-            "country": "GB",
-         }
-      }],
-      temperature,
-      instructions: instructions || undefined,
-      input,
-   };
+  const options = {
+    model: MODEL,
+    tools: [{
+      type: "web_search_preview",
+      search_context_size: "medium",
+      user_location: {
+        "type": "approximate",
+        "country": "GB",
+      }
+    }],
+    temperature,
+    instructions: instructions || undefined,
+    input,
+  };
 
-   if (schema) {
-      options.text = {
-         format: {
-            name: 'structured_output',
-            type: 'json_schema',
-            schema,
-            strict: true,
-         },
-      };
-   }
+  if (schema) {
+    options.text = {
+      format: {
+        name: 'structured_output',
+        type: 'json_schema',
+        schema,
+        strict: true,
+      },
+    };
+  }
 
-   if (process.env.DEBUG === 'true') {
-      console.log('DEBUG: Sending to LLM:', inspect(options, { depth: null, colors: true }));
-   }
+  if (process.env.DEBUG === 'true') {
+    console.log('DEBUG: Sending to LLM:', inspect(options, { depth: null, colors: true }));
+  }
 
-   const res = await client.responses.create(options);
+  const res = await client.responses.create(options);
 
-   if (process.env.DEBUG === 'true') {
-      console.log('DEBUG: Response from LLM:', JSON.stringify(res, null, 2));
-   }
+  if (process.env.DEBUG === 'true') {
+    console.log('DEBUG: Response from LLM:', JSON.stringify(res, null, 2));
+  }
 
-   return schema ? JSON.parse(res.output_text) : res.output_text;
+  return schema ? JSON.parse(res.output_text) : res.output_text;
 }
 
 // ————————————————————————————————————————————————
 // Domain logic — all functions now return structured outputs
 // ————————————————————————————————————————————————
+/**
+ * Fetches the job description for the specified job title.
+ * Returns the job description and sources consulted.
+ * @param {string} job - Job title or description.
+ * @returns {Promise<Object>} Job description and sources.
+ */
 async function fetchJobDescription(job) {
   const input = [
     {
@@ -133,6 +163,12 @@ async function fetchJobDescription(job) {
   return result; // { role_title?, job_description, sources? }
 }
 
+/**
+ * Checks whether applications are still open for the specified job.
+ * Returns a boolean indicating the status and a confidence score.
+ * @param {string} job - Job title or description.
+ * @returns {Promise<Object>} Application status and confidence score.
+ */
 async function applicationStillOpen(job) {
   const input = [
     {
@@ -152,6 +188,13 @@ async function applicationStillOpen(job) {
   return sendToLLM({ input, schema, instructions: 'Return a careful, up-to-date assessment.' });
 }
 
+/**
+ * Assesses the relevance of a skill to the specified job description.
+ * Returns a score and a rationale for the relevance.
+ * @param {string} skillDescription - Description of the skill.
+ * @param {string} jobDescription - Job description.
+ * @returns {Promise<Object>} Relevance score and rationale.
+ */
 async function assessSkillRelevanceToNewJob(skillDescription, jobDescription) {
   const input = [
     { role: 'system', content: 'Return JSON only.' },
@@ -182,6 +225,23 @@ Please provide a score from 1 (not very relevant) to 10 (highly relevant) and pr
   return sendToLLM({ input, schema }); // { score, rationale? }
 }
 
+/**
+ * Assesses the relevance of a past role to a new job based on the provided job description.
+ *
+ * This function sends a structured input to a language model to evaluate how relevant a past role
+ * from a CV is to a given job description. The language model returns a score between 1 and 10,
+ * along with a one-sentence rationale for the score.
+ *
+ * @async
+ * @function
+ * @param {Object} role - The past role to assess.
+ * @param {string} role.jobTitle - The title of the past role.
+ * @param {string} role.from - The start date of the past role.
+ * @param {string} role.to - The end date of the past role.
+ * @param {string} [role.description] - A description of the past role (optional).
+ * @param {string} jobDescription - The description of the new job being considered.
+ * @returns {Promise<Object>} A promise that resolves to an object containing:
+*/
 async function assessRoleRelevanceToNewJob(role, jobDescription) {
   const input = [
     { role: 'system', content: 'Return JSON only.' },
@@ -217,7 +277,19 @@ Please provide a score from 1 (not very relevant) to 10 (highly relevant) and pr
 function byScoreDesc(a, b) { return b.score - a.score; }
 function byStartDateDesc(a, b) { return (b.from || '').localeCompare(a.from || ''); }
 
-async function composeCVMarkdown(cv) {
+/**
+ * Converts structured CV data into a well-formatted Markdown document.
+ * 
+ * Input must include `personalDetails`, `qualifications`, `skills`, and `pastJobRoles`.
+ * The CV structure should already be job-tailored (e.g. skills sorted by relevance).
+ * 
+ * This function sends the JSON-formatted CV to an OpenAI model using the Responses API,
+ * and expects structured output including the final Markdown content.
+ * 
+ * @param {Object} cv - Tailored CV data as a JavaScript object
+ * @returns {Promise<Object>} - Structured LLM response including `cv_markdown`
+ */
+ async function composeCVMarkdown(cv) {
   const cvJSON = JSON.stringify(cv, null, 2);
   const input = [
     {
@@ -240,6 +312,19 @@ Please convert this to a clean, well-formatted Markdown CV suitable for UK appli
   return sendToLLM({ input, schema, instructions: 'Write professional CV Markdown.' }); // { cv_markdown, headings? }
 }
 
+/**
+ * Requests detailed suggestions for improving a CV in Markdown format.
+ *
+ * The function sends the entire Markdown CV to an OpenAI model via the Responses API
+ * and returns a structured list of edits. Each suggestion includes a type,
+ * an optional location within the document, and a free-form text recommendation.
+ *
+ * Suggested edit types may include: 'clarity', 'typo', 'formatting', 'impact',
+ * 'consistency', 'tone', or 'other'.
+ *
+ * @param {string} cvMarkdown - The CV in Markdown format
+ * @returns {Promise<Object>} - An object with a `suggestions` array of edit proposals
+ */
 async function suggestCVImprovements(cvMarkdown) {
   const input = [
     {
@@ -274,7 +359,20 @@ ${cvMarkdown}
   return sendToLLM({ input, schema, instructions: 'Provide actionable, concise suggestions.' });
 }
 
-async function applyCVEdits(cvMarkdown, suggestions) {
+/**
+ * Applies a list of approved CV edits to the original Markdown document using the LLM.
+ *
+ * Sends both the original Markdown CV and a list of structured, user-approved suggestions
+ * to the OpenAI model. The LLM is instructed to apply only those edits, making no additional
+ * changes unless strictly necessary to implement them. The result is returned as updated Markdown.
+ *
+ * This function uses structured output (JSON Schema) to ensure a predictable response format.
+ *
+ * @param {string} cvMarkdown - The original CV in Markdown format
+ * @param {Array<Object>} suggestions - Approved edits, each with `type`, `location`, and `suggestion`
+ * @returns {Promise<Object>} - Object containing `cv_markdown` (the revised CV)
+ */
+ async function applyCVEdits(cvMarkdown, suggestions) {
   const input = [
     {
       role: 'user',
@@ -343,6 +441,19 @@ function parseIndexList(inputStr, max) {
 
 const TYPE_OPTIONS = ['clarity', 'typo', 'formatting', 'impact', 'consistency', 'tone', 'other'];
 
+/**
+ * Interactively reviews and modifies a list of suggestions.
+ * 
+ * This function provides a command-line interface for users to review,
+ * edit, or delete suggestions from a given list. Users can interactively
+ * modify the list using commands such as delete, edit, continue, or quit.
+ * 
+ * @async
+ * @function
+ * @param {Array<Object>} suggestions - An array of suggestion objects to review.
+ * @param {string} suggestions[].suggestion - The suggestion text.
+ * @returns {Promise<Array<Object>>} A promise that resolves to the modified list of suggestions.
+ */
 async function reviewSuggestionsInteractively(suggestions) {
 
   const rl = readline.createInterface({ input, output });
@@ -393,6 +504,15 @@ async function reviewSuggestionsInteractively(suggestions) {
   }
 }
 
+/**
+ * Enhances a CV written in Markdown format by providing suggestions for improvements
+ * and allowing the user to interactively review and apply those suggestions.
+ *
+ * @async
+ * @function polishCV
+ * @param {string} cvMarkdown - The CV content in Markdown format.
+ * @returns {Promise<string>} - A promise that resolves to the improved CV in Markdown format.
+ */
 async function polishCV(cvMarkdown) {
 
   marked.setOptions({
@@ -411,6 +531,17 @@ async function polishCV(cvMarkdown) {
   return cv_markdown;
 }
 
+/**
+ * Generates a persuasive and tailored covering letter for a job application.
+ *
+ * @async
+ * @function draftCoveringLetter
+ * @param {Object} cvBaseData - The applicant's CV data, containing background information.
+ * @param {string} coveringLetterThoughts - Personal notes to guide the tone and emphasis of the letter.
+ * @param {string} jobDescription - The job description for the position being applied for.
+ * @returns {Promise<Object>} A promise that resolves to an object containing the generated covering letter.
+ * @throws {Error} If the input data is invalid or the letter generation fails.
+ */
 async function draftCoveringLetter(cvBaseData, coveringLetterThoughts, jobDescription) {
   const input = [
     {
@@ -447,6 +578,13 @@ Write a persuasive, tailored covering letter in British English, 400–650 words
 // ————————————————————————————————————————————————
 // Orchestrator
 // ————————————————————————————————————————————————
+/**
+ * Drafts a CV tailored to the specified job description.
+ * Filters and ranks skills, achievements, and past roles based on relevance.
+ * @param {Object} cvBaseData - Base CV data.
+ * @param {string} jobDescription - Job description.
+ * @returns {Promise<string>} Drafted CV in Markdown format.
+ */
 async function draftCV(cvBaseData, jobDescription) {
   const cv = {
     personalDetails: cvBaseData.personalDetails,

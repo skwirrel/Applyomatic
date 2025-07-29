@@ -1,0 +1,7 @@
+{
+  "job": "Senior Software Developer at ACME Widgets PLC",
+  "minReapplyDays": 30,
+  "maxReapplyDays": 90,
+  "maxAttempts": 3,
+  "daemon": false
+}
